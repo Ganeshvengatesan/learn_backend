@@ -4,7 +4,7 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const path = require('path');
 
-const { sequelize } = require('./src/config/database');
+const sequelize = require('./src/config/database'); // FIXED
 const authRoutes = require('./src/routes/auth');
 const uploadRoutes = require('./src/routes/upload');
 const aiRoutes = require('./src/routes/ai');
@@ -19,15 +19,12 @@ app.use(cors({
 }));
 
 app.use(express.json());
-// Add urlencoded parser to support form submissions
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Ensure tmp directory exists for multer
+// Ensure tmp directory exists
 const tmpDir = path.join(__dirname, 'tmp');
-try {
-  require('fs').mkdirSync(tmpDir, { recursive: true });
-} catch {}
+require('fs').mkdirSync(tmpDir, { recursive: true });
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
@@ -37,16 +34,14 @@ app.use('/api/auth', authRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/ai', aiRoutes);
 
-// Initialize DB and start server
 const PORT = process.env.PORT || 3000;
+
 (async () => {
   try {
     await sequelize.authenticate();
     await sequelize.sync({ alter: true });
     console.log('✅ Database connected and synced');
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
-    });
+    app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
   } catch (err) {
     console.error('❌ DB connection failed:', err);
     process.exit(1);
