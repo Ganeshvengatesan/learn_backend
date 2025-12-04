@@ -12,19 +12,28 @@ function signTokens(user) {
 }
 
 function setAuthCookies(res, tokens) {
-  const isSecure = (process.env.COOKIE_SECURE || 'false') === 'true';
+  // For cross-origin requests (frontend on different domain), we need:
+  // - sameSite: 'none' (allows cross-origin cookies)
+  // - secure: true (required when sameSite is 'none')
+  const isProduction = process.env.NODE_ENV === 'production';
   const cookieOpts = {
     httpOnly: true,
-    sameSite: 'lax',
-    secure: isSecure,
+    sameSite: isProduction ? 'none' : 'lax', // 'none' for cross-origin in production
+    secure: isProduction, // true in production (required for sameSite: 'none')
   };
   res.cookie('access_token', tokens.accessToken, { ...cookieOpts, maxAge: 15 * 60 * 1000 });
   res.cookie('refresh_token', tokens.refreshToken, { ...cookieOpts, maxAge: 7 * 24 * 60 * 60 * 1000 });
 }
 
 function clearAuthCookies(res) {
-  res.clearCookie('access_token');
-  res.clearCookie('refresh_token');
+  const isProduction = process.env.NODE_ENV === 'production';
+  const cookieOpts = {
+    httpOnly: true,
+    sameSite: isProduction ? 'none' : 'lax',
+    secure: isProduction,
+  };
+  res.clearCookie('access_token', cookieOpts);
+  res.clearCookie('refresh_token', cookieOpts);
 }
 
 function requireAuth(req, res, next) {

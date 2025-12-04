@@ -11,12 +11,43 @@ const aiRoutes = require('./src/routes/ai');
 
 const app = express();
 
-// CORS with credentials
-const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173';
-app.use(cors({
-  origin: corsOrigin,
-  credentials: true,
-}));
+// CORS with credentials - support multiple origins
+const allowedOrigins = [
+  // Local development
+  'http://localhost:5173',
+  'http://localhost:3000',
+  
+  // Production frontend
+  'https://learnaiassist.netlify.app',
+  
+  // Cloudflare Workers
+  'https://education.learnwise-ai.workers.dev',
+  
+  // Render backend (if needed for direct API access)
+  'https://learn-backend-y751.onrender.com',
+  
+  // Fallback from environment variable
+  process.env.CORS_ORIGIN
+].filter(Boolean); // Remove any undefined values
+
+// CORS middleware with preflight continue
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+      return res.status(200).end();
+    }
+  } else if (origin) {
+    console.warn('⚠️ CORS blocked origin:', origin);
+  }
+  next();
+});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

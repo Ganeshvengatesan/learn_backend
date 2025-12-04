@@ -88,22 +88,34 @@ router.post('/logout', async (req, res) => {
 });
 
 router.post('/refresh', async (req, res) => {
-  const refresh = req.cookies.refresh_token;
-  if (!refresh) return res.status(401).json({ message: 'Unauthorized' });
+  const refreshToken = req.cookies.refresh_token;
+  if (!refreshToken) return res.status(401).json({ message: 'No refresh token provided' });
+  
   try {
-    const payload = jwt.verify(refresh, process.env.JWT_REFRESH_SECRET);
-    const accessToken = jwt.sign({ id: payload.id, email: payload.email, name: payload.name }, process.env.JWT_ACCESS_SECRET, {
-      expiresIn: process.env.TOKEN_EXPIRES_IN || '15m',
+    // Verify the refresh token
+    const payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+    
+    // Get the user to ensure they still exist
+    const user = await User.findByPk(payload.id);
+    if (!user) {
+      clearAuthCookies(res);
+      return res.status(401).json({ message: 'User not found' });
+    }
+    
+    // Generate new tokens
+    const tokens = signTokens(user);
+    
+    // Set the new cookies using the same function as login/register
+    setAuthCookies(res, tokens);
+    
+    res.json({ 
+      message: 'Token refreshed',
+      user: { id: user.id, name: user.name, email: user.email }
     });
-    res.cookie('access_token', accessToken, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: (process.env.COOKIE_SECURE || 'false') === 'true',
-      maxAge: 15 * 60 * 1000,
-    });
-    res.json({ message: 'refreshed' });
   } catch (err) {
-    return res.status(401).json({ message: 'Unauthorized' });
+    console.error('Refresh token error:', err);
+    clearAuthCookies(res);
+    return res.status(401).json({ message: 'Invalid or expired refresh token' });
   }
 });
 
