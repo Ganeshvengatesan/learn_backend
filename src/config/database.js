@@ -7,15 +7,15 @@ const sequelize = new Sequelize(
   {
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
-    dialect: process.env.DB_DIALECT || 'mysql',
-    logging: false,
+    dialect: 'postgres',
     dialectOptions: {
       ssl: {
         require: true,
-        rejectUnauthorized: false
+        rejectUnauthorized: false, 
       }
-    }
+    },
+    logging: false
   }
 );
 
-module.exports = { sequelize };
+module.exports = sequelize;
